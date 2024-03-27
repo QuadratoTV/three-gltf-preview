@@ -1,4 +1,5 @@
 import {
+	ACESFilmicToneMapping,
 	AmbientLight,
 	AnimationMixer,
 	AxesHelper,
@@ -6,20 +7,16 @@ import {
 	Cache,
 	Color,
 	DirectionalLight,
-	GridHelper,
-	HemisphereLight,
+	HemisphereLight, LinearFilter,
+	LinearToneMapping,
 	LoaderUtils,
 	LoadingManager,
-	PMREMGenerator,
 	PerspectiveCamera,
-	PointsMaterial,
+	PMREMGenerator,
 	REVISION,
 	Scene,
-	SkeletonHelper,
 	Vector3,
-	WebGLRenderer,
-	LinearToneMapping,
-	ACESFilmicToneMapping,
+	WebGLRenderer
 } from 'three';
 import Stats from 'three/addons/libs/stats.module.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -39,13 +36,11 @@ const DEFAULT_CAMERA = '[default]';
 const MANAGER = new LoadingManager();
 const THREE_PATH = `https://unpkg.com/three@0.${REVISION}.x`;
 const DRACO_LOADER = new DRACOLoader(MANAGER).setDecoderPath(
-	`${THREE_PATH}/examples/jsm/libs/draco/gltf/`,
+	`${THREE_PATH}/examples/jsm/libs/draco/gltf/`
 );
 const KTX2_LOADER = new KTX2Loader(MANAGER).setTranscoderPath(
-	`${THREE_PATH}/examples/jsm/libs/basis/`,
+	`${THREE_PATH}/examples/jsm/libs/basis/`
 );
-
-const IS_IOS = isIOS();
 
 const Preset = { ASSET_GENERATOR: 'assetgenerator' };
 
@@ -63,17 +58,10 @@ export class Viewer {
 		this.gui = null;
 
 		this.state = {
-			environment:
-				options.preset === Preset.ASSET_GENERATOR
-					? environments.find((e) => e.id === 'footprint-court').name
-					: environments[1].name,
-			background: false,
+			environment: environments[0].name,
 			playbackSpeed: 1.0,
 			actionStates: {},
 			camera: DEFAULT_CAMERA,
-			wireframe: false,
-			skeleton: false,
-			grid: false,
 			autoRotate: false,
 
 			// Lights
@@ -86,7 +74,7 @@ export class Viewer {
 			directColor: '#FFFFFF',
 			bgColor: '#191919',
 
-			pointSize: 1.0,
+			pointSize: 1.0
 		};
 
 		this.prevTime = 0;
@@ -127,13 +115,9 @@ export class Viewer {
 		this.animCtrls = [];
 		this.morphFolder = null;
 		this.morphCtrls = [];
-		this.skeletonHelpers = [];
-		this.gridHelper = null;
-		this.axesHelper = null;
 
 		this.addAxesHelper();
 		this.addGUI();
-		if (options.kiosk) this.gui.close();
 
 		this.animate = this.animate.bind(this);
 		requestAnimationFrame(this.animate);
@@ -155,6 +139,16 @@ export class Viewer {
 
 	render() {
 		this.renderer.render(this.scene, this.activeCamera);
+
+		if (this.content) {
+			traverseMaterials(this.content, (material) => {
+				if (material.map) {
+					material.map.minFilter = LinearFilter;
+					material.map.needsUpdate = true;
+				}
+			});
+		}
+
 		if (this.state.grid) {
 			this.axesCamera.position.copy(this.defaultCamera.position);
 			this.axesCamera.lookAt(this.axesScene.position);
@@ -216,14 +210,6 @@ export class Viewer {
 					const scene = gltf.scene || gltf.scenes[0];
 					const clips = gltf.animations || [];
 
-					if (!scene) {
-						// Valid, but not supported by this viewer.
-						throw new Error(
-							'This model contains no scene, and cannot be viewed here. However,' +
-								' it may contain individual 3D resources.',
-						);
-					}
-
 					this.setContent(scene, clips);
 
 					blobURLs.forEach(URL.revokeObjectURL);
@@ -234,7 +220,7 @@ export class Viewer {
 					resolve(gltf);
 				},
 				undefined,
-				reject,
+				reject
 			);
 		});
 	}
@@ -244,8 +230,6 @@ export class Viewer {
 	 * @param {Array<THREE.AnimationClip} clips
 	 */
 	setContent(object, clips) {
-		this.clear();
-
 		object.updateMatrixWorld(); // donmccurdy/three-gltf-viewer#330
 
 		const box = new Box3().setFromObject(object);
@@ -406,7 +390,7 @@ export class Viewer {
 
 	updateEnvironment() {
 		const environment = environments.filter(
-			(entry) => entry.name === this.state.environment,
+			(entry) => entry.name === this.state.environment
 		)[0];
 
 		this.getCubeMapTexture(environment).then(({ envMap }) => {
@@ -438,50 +422,12 @@ export class Viewer {
 					resolve({ envMap });
 				},
 				undefined,
-				reject,
+				reject
 			);
 		});
 	}
 
 	updateDisplay() {
-		if (this.skeletonHelpers.length) {
-			this.skeletonHelpers.forEach((helper) => this.scene.remove(helper));
-		}
-
-		traverseMaterials(this.content, (material) => {
-			material.wireframe = this.state.wireframe;
-
-			if (material instanceof PointsMaterial) {
-				material.size = this.state.pointSize;
-			}
-		});
-
-		this.content.traverse((node) => {
-			if (node.geometry && node.skeleton && this.state.skeleton) {
-				const helper = new SkeletonHelper(node.skeleton.bones[0].parent);
-				helper.material.linewidth = 3;
-				this.scene.add(helper);
-				this.skeletonHelpers.push(helper);
-			}
-		});
-
-		if (this.state.grid !== Boolean(this.gridHelper)) {
-			if (this.state.grid) {
-				this.gridHelper = new GridHelper();
-				this.axesHelper = new AxesHelper();
-				this.axesHelper.renderOrder = 999;
-				this.axesHelper.onBeforeRender = (renderer) => renderer.clearDepth();
-				this.scene.add(this.gridHelper);
-				this.scene.add(this.axesHelper);
-			} else {
-				this.scene.remove(this.gridHelper);
-				this.scene.remove(this.axesHelper);
-				this.gridHelper = null;
-				this.axesHelper = null;
-				this.axesRenderer.clear();
-			}
-		}
-
 		this.controls.autoRotate = this.state.autoRotate;
 	}
 
@@ -520,21 +466,13 @@ export class Viewer {
 		const gui = (this.gui = new GUI({
 			autoPlace: false,
 			width: 260,
-			hideable: true,
+			hideable: true
 		}));
 
 		// Display controls.
 		const dispFolder = gui.addFolder('Display');
-		const envBackgroundCtrl = dispFolder.add(this.state, 'background');
-		envBackgroundCtrl.onChange(() => this.updateEnvironment());
 		const autoRotateCtrl = dispFolder.add(this.state, 'autoRotate');
 		autoRotateCtrl.onChange(() => this.updateDisplay());
-		const wireframeCtrl = dispFolder.add(this.state, 'wireframe');
-		wireframeCtrl.onChange(() => this.updateDisplay());
-		const skeletonCtrl = dispFolder.add(this.state, 'skeleton');
-		skeletonCtrl.onChange(() => this.updateDisplay());
-		const gridCtrl = dispFolder.add(this.state, 'grid');
-		gridCtrl.onChange(() => this.updateDisplay());
 		dispFolder.add(this.controls, 'screenSpacePanning');
 		const pointSizeCtrl = dispFolder.add(this.state, 'pointSize', 1, 16);
 		pointSizeCtrl.onChange(() => this.updateDisplay());
@@ -546,20 +484,20 @@ export class Viewer {
 		const envMapCtrl = lightFolder.add(
 			this.state,
 			'environment',
-			environments.map((env) => env.name),
+			environments.map((env) => env.name)
 		);
 		envMapCtrl.onChange(() => this.updateEnvironment());
 		[
 			lightFolder.add(this.state, 'toneMapping', {
 				Linear: LinearToneMapping,
-				'ACES Filmic': ACESFilmicToneMapping,
+				'ACES Filmic': ACESFilmicToneMapping
 			}),
 			lightFolder.add(this.state, 'exposure', -10, 10, 0.01),
 			lightFolder.add(this.state, 'punctualLights').listen(),
 			lightFolder.add(this.state, 'ambientIntensity', 0, 2),
 			lightFolder.addColor(this.state, 'ambientColor'),
 			lightFolder.add(this.state, 'directIntensity', 0, 4), // TODO(#116)
-			lightFolder.addColor(this.state, 'directColor'),
+			lightFolder.addColor(this.state, 'directColor')
 		].forEach((ctrl) => ctrl.onChange(() => this.updateLights()));
 
 		// Animation controls.
@@ -590,7 +528,7 @@ export class Viewer {
 		const guiWrap = document.createElement('div');
 		this.el.appendChild(guiWrap);
 		guiWrap.classList.add('gui-wrap');
-		//guiWrap.appendChild(gui.domElement);
+		guiWrap.appendChild(gui.domElement);
 		gui.open();
 	}
 
@@ -631,7 +569,7 @@ export class Viewer {
 				if (mesh.morphTargetInfluences.length) {
 					const nameCtrl = this.morphFolder.add(
 						{ name: mesh.name || 'Untitled' },
-						'name',
+						'name'
 					);
 					this.morphCtrls.push(nameCtrl);
 				}
@@ -674,28 +612,6 @@ export class Viewer {
 			});
 		}
 	}
-
-	clear() {
-		if (!this.content) return;
-
-		this.scene.remove(this.content);
-
-		// dispose geometry
-		this.content.traverse((node) => {
-			if (!node.geometry) return;
-
-			node.geometry.dispose();
-		});
-
-		// dispose textures
-		traverseMaterials(this.content, (material) => {
-			for (const key in material) {
-				if (key !== 'envMap' && material[key] && material[key].isTexture) {
-					material[key].dispose();
-				}
-			}
-		});
-	}
 }
 
 function traverseMaterials(object, callback) {
@@ -704,15 +620,4 @@ function traverseMaterials(object, callback) {
 		const materials = Array.isArray(node.material) ? node.material : [node.material];
 		materials.forEach(callback);
 	});
-}
-
-// https://stackoverflow.com/a/9039885/1314762
-function isIOS() {
-	return (
-		['iPad Simulator', 'iPhone Simulator', 'iPod Simulator', 'iPad', 'iPhone', 'iPod'].includes(
-			navigator.platform,
-		) ||
-		// iPad on iOS 13 detection
-		(navigator.userAgent.includes('Mac') && 'ontouchend' in document)
-	);
 }
