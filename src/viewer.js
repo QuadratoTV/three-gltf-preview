@@ -269,9 +269,9 @@ export class Viewer {
 			this.defaultCamera.lookAt(new Vector3());
 		} else {
 			this.defaultCamera.position.copy(center);
-			this.defaultCamera.position.x += size / 2.0;
-			this.defaultCamera.position.y += size / 5.0;
-			this.defaultCamera.position.z += size / 2.0;
+			this.defaultCamera.position.x += size / 1.9;
+			this.defaultCamera.position.y += size / 15.0;
+			this.defaultCamera.position.z += size / 1.7;
 			this.defaultCamera.lookAt(center);
 		}
 
@@ -590,7 +590,7 @@ export class Viewer {
 		const guiWrap = document.createElement('div');
 		this.el.appendChild(guiWrap);
 		guiWrap.classList.add('gui-wrap');
-		guiWrap.appendChild(gui.domElement);
+		//guiWrap.appendChild(gui.domElement);
 		gui.open();
 	}
 
