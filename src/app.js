@@ -70,23 +70,29 @@ class App {
 
 		const viewer = this.viewer || this.createViewer();
 
-		const fileURL = typeof rootFile === 'string' ? rootFile : URL.createObjectURL(rootFile);
+		const fileURL = URL.createObjectURL(rootFile);
 
 		viewer
 			.load(fileURL, rootPath, fileMap)
 			.catch((e) => console.log(e))
-			.then((gltf) => {});
+			.then((gltf) => {
+			});
 	}
 
 	async fetchAndLoadFilesFromExample() {
-		const filenames = ['bmw_m4_gt3.bin', 'bmw_m4_gt3.gltf', 'EXT_Banner_Colour_tga.png', 'EXT_Details_Colour.png', 'EXT_Details_NM.png', 'EXT_Disc_Colour.png', 'EXT_Disc_NM.png', 'EXT_Grid_2_Colour.png', 'EXT_Grid_2_NM.png', 'EXT_Lights_Colour_tga.png', 'EXT_Lights_NM_tga.png', 'EXT_Mechanics_Colour_tga.png', 'EXT_Mechanics_NM_tga.png', 'EXT_Rim_Colour_tga.png', 'livery.png', 'Tyre_Dry_Colour_tga.png', 'Tyre_Dry_NM_tga.png']; // replace with your actual filenames
+		const urlParams = new URLSearchParams(window.location.search);
+		const filesParam = urlParams.get('files');
+		const filenames = filesParam ? filesParam.split(',') : []; // split the 'files' parameter into an array of filenames
+
 		const fileMap = new Map();
 
+		const baseURL = 'http://localhost:8080';
+
 		const filePromises = filenames.map(async filename => {
-			const response = await fetch(`/example/${filename}`);
+			const response = await fetch(`${baseURL}${filename}`);
 			const blob = await response.blob();
-			const file = new File([blob], filename);
-			fileMap.set(filename, file);
+			const file = new File([blob], filename.split('/').pop());
+			fileMap.set(filename.split('/').pop(), file);
 		});
 
 		await Promise.all(filePromises);
