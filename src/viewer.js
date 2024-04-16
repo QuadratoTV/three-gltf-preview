@@ -72,7 +72,7 @@ export class Viewer {
 			ambientColor: '#FFFFFF',
 			directIntensity: 0.8 * Math.PI, // TODO(#116)
 			directColor: '#FFFFFF',
-			bgColor: '#191919',
+			bgColor: '#141414',
 
 			pointSize: 1.0
 		};
@@ -171,6 +171,10 @@ export class Viewer {
 	load(url, rootPath, assetMap) {
 		const baseURL = LoaderUtils.extractUrlBase(url);
 
+		console.log(baseURL);
+
+		console.log(url);
+
 		// Load.
 		return new Promise((resolve, reject) => {
 			// Intercept and override relative URLs.
@@ -201,6 +205,8 @@ export class Viewer {
 				.setMeshoptDecoder(MeshoptDecoder);
 
 			const blobURLs = [];
+
+			console.log(url);
 
 			loader.load(
 				url,
@@ -242,7 +248,7 @@ export class Viewer {
 		object.position.y -= center.y;
 		object.position.z -= center.z;
 
-		this.controls.maxDistance = size * 10;
+		this.controls.maxDistance = size * 2;
 
 		this.defaultCamera.near = size / 100;
 		this.defaultCamera.far = size * 100;
@@ -250,13 +256,12 @@ export class Viewer {
 
 		if (this.options.cameraPosition) {
 			this.defaultCamera.position.fromArray(this.options.cameraPosition);
-			this.defaultCamera.lookAt(new Vector3());
+			this.defaultCamera.lookAt(new Vector3(0, 10, 0));
 		} else {
 			this.defaultCamera.position.copy(center);
-			this.defaultCamera.position.x += size / 1.9;
-			this.defaultCamera.position.y += size / 15.0;
-			this.defaultCamera.position.z += size / 1.7;
-			this.defaultCamera.lookAt(center);
+			this.defaultCamera.position.x += 3.5; // Adjust these values to change the camera's position
+			this.defaultCamera.position.y += 0.0;
+			this.defaultCamera.position.z += 3.5;
 		}
 
 		this.setCamera(DEFAULT_CAMERA);
@@ -395,7 +400,7 @@ export class Viewer {
 
 		this.getCubeMapTexture(environment).then(({ envMap }) => {
 			this.scene.environment = envMap;
-			this.scene.background = this.state.background ? envMap : this.backgroundColor;
+			this.scene.background = this.backgroundColor;
 		});
 	}
 
