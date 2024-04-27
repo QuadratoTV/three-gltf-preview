@@ -1,127 +1,174 @@
-import { Viewer } from './viewer.js';
+import {Viewer} from './viewer.js';
 import queryString from 'query-string';
 
 window.VIEWER = {};
 
 class App {
-	/**
-	 * @param  {Element} el
-	 * @param  {Location} location
-	 */
-	constructor(el, location) {
-		const hash = location.hash ? queryString.parse(location.hash) : {};
-		this.options = {
-			kiosk: true,
-			model: hash.model || '',
-			preset: hash.preset || '',
-			cameraPosition: hash.cameraPosition ? hash.cameraPosition.split(',').map(Number) : null
-		};
 
-		this.el = el;
-		this.viewer = null;
-		this.viewerEl = null;
-		this.spinnerEl = el.querySelector('.spinner');
-		this.dropEl = el.querySelector('.dropzone');
-		this.inputEl = el.querySelector('#file-input');
+    /**
+     * @param  {Element} el
+     * @param  {Location} location
+     */
+    constructor(el, location) {
+        const hash = location.hash ? queryString.parse(location.hash) : {};
+        this.options = {
+            kiosk: true,
+            model: hash.model || '',
+            preset: hash.preset || '',
+            cameraPosition: hash.cameraPosition ? hash.cameraPosition.split(',').map(Number) : null
+        };
 
-		const options = this.options;
+        this.el = el;
+        this.viewer = null;
+        this.viewerEl = null;
+        this.spinnerEl = el.querySelector('.spinner');
+        this.dropEl = el.querySelector('.dropzone');
+        this.inputEl = el.querySelector('#file-input');
 
-		this.fetchAndLoadFilesFromExample();
-	}
+        const options = this.options;
 
-	/**
-	 * Sets up the view manager.
-	 * @return {Viewer}
-	 */
-	createViewer() {
-		this.viewerEl = document.createElement('div');
-		this.viewerEl.classList.add('viewer');
-		this.dropEl.innerHTML = '';
-		this.dropEl.appendChild(this.viewerEl);
-		this.viewer = new Viewer(this.viewerEl, this.options);
-		return this.viewer;
-	}
+        this.fetchAndLoadFilesFromExample();
+    }
 
-	/**
-	 * Loads a fileset provided by user action.
-	 * @param  {Map<string, File>} fileMap
-	 */
-	load(fileMap) {
-		let rootFile;
-		let rootPath;
-		console.log(fileMap)
-		Array.from(fileMap).forEach(([path, file]) => {
-			if (file.name.match(/\.(gltf|glb)$/)) {
-				rootFile = file;
-				rootPath = path.replace(file.name, '');
-			}
-		});
+    /**
+     * Sets up the view manager.
+     * @return {Viewer}
+     */
+    createViewer() {
+        this.viewerEl = document.createElement('div');
+        this.viewerEl.classList.add('viewer');
+        this.dropEl.innerHTML = '';
+        this.dropEl.appendChild(this.viewerEl);
+        this.viewer = new Viewer(this.viewerEl, this.options);
+        return this.viewer;
+    }
 
-		this.view(rootFile, rootPath, fileMap);
-	}
+    /**
+     * Loads a fileset provided by user action.
+     * @param  {Map<string, File>} fileMap
+     */
+    load(fileMap) {
+        let rootFile;
+        let rootPath;
+        console.log(fileMap)
+        Array.from(fileMap).forEach(([path, file]) => {
+            if (file.name.match(/\.(gltf|glb)$/)) {
+                rootFile = file;
+                rootPath = path.replace(file.name, '');
+            }
+        });
 
-	/**
-	 * Passes a model to the viewer, given file and resources.
-	 * @param  {File|string} rootFile
-	 * @param  {string} rootPath
-	 * @param  {Map<string, File>} fileMap
-	 */
-	view(rootFile, rootPath, fileMap) {
-		if (this.viewer) this.viewer.clear();
+        this.view(rootFile, rootPath, fileMap);
+    }
 
-		const viewer = this.viewer || this.createViewer();
+    /**
+     * Passes a model to the viewer, given file and resources.
+     * @param  {File|string} rootFile
+     * @param  {string} rootPath
+     * @param  {Map<string, File>} fileMap
+     */
+    view(rootFile, rootPath, fileMap) {
+        if (this.viewer) this.viewer.clear();
 
-		console.log(rootFile, rootPath, fileMap)
+        const viewer = this.viewer || this.createViewer();
 
-		const fileURL = URL.createObjectURL(rootFile);
+        console.log(rootFile, rootPath, fileMap)
 
-		viewer
-			.load(fileURL, rootPath, fileMap)
-			.catch((e) => console.log(e))
-			.then((gltf) => {
-			});
-	}
+        const fileURL = URL.createObjectURL(rootFile);
 
-	async fetchAndLoadFilesFromExample() {
-		const urlParams = new URLSearchParams(window.location.search);
-		const carParam = urlParams.get('car');
-		const liveryId = urlParams.get('liveryId');
+        viewer
+            .load(fileURL, rootPath, fileMap)
+            .catch((e) => console.log(e))
+            .then((gltf) => {
+            });
+    }
 
-		const fileMap = new Map();
+    async fetchAndLoadFilesFromExample() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const carParam = urlParams.get('car');
+        const liveryId = urlParams.get('liveryId');
 
-		// Fetch all files from the public directory related to the car
-		const response = await fetch(`/car_models/modelInfo.json`);
-		let carFiles = await response.json();
-		carFiles = carFiles[carParam];
+        const fileMap = new Map();
 
-		const filePromises = carFiles.map(async filename => {
-			const response = await fetch(`/car_models/${carParam}/${filename}`);
-			const blob = await response.blob();
-			const file = new File([blob], filename.split('/').pop());
-			fileMap.set(filename.split('/').pop(), file);
-		});
+        // Fetch all files from the public directory related to the car
+        let response = await fetch(`/preview/car_models/modelInfo.json`);
+        let carFiles = await response.json();
+        carFiles = carFiles[carParam];
 
-		await Promise.all(filePromises);
+        const filePromises = carFiles.map(async filename => {
+            let response = await fetch(`/preview/car_models/${carParam}/${filename}`);
+            // response = await modifyGltfFile(response, filename.split('/').pop());
+            const blob = await response.blob();
+            const file = new File([blob], filename.split('/').pop());
+            fileMap.set(filename.split('/').pop(), file);
+        });
 
-		/*// Fetch the specific file from MongoDB GridFS bucket
-		const client = await MongoClient.connect('mongodb+srv://rw:we7NJSXwGwFbnxcC@rennwelten.cqnld9c.mongodb.net/?retryWrites=true&w=majority&appName=rennwelten');
-		const db = client.db('rennwelten_livery');
-		const bucket = new GridFSBucket(db);
+        await Promise.all(filePromises);
 
-		const gridFsFile = await new Promise((resolve, reject) => {
-			bucket.openDownloadStreamByName(liveryId + "_decals")
-				.on('data', chunk => resolve(chunk))
-				.on('error', error => reject(error));
-		});
+        response = await fetch(`/livery_texture/${liveryId}`);
+        const blob = await response.blob();
+        const file = new File([blob], "livery.png");
+        fileMap.set("livery.png", file);
 
-		const gridFsBlob = new Blob([gridFsFile]);
-		const gridFsFileObj = new File([gridFsBlob], "livery.png");
-		fileMap.set(liveryId, gridFsFileObj);*/
+        this.load(fileMap);
+    }
+}
 
-		this.load(fileMap);
-	}
+const urlParams = new URLSearchParams(window.location.search);
+const clearCoat = urlParams.get('clearCoat');
+const clearCoatRoughness = urlParams.get('clearCoatRoughness');
+const baseRoughness = urlParams.get('baseRoughness');
+const metallic = urlParams.get('metallic');
+
+const decalsObject = {
+    clearCoat: parseFloat(clearCoat),
+    clearCoatRoughness: parseFloat(clearCoatRoughness),
+    baseRoughness: parseFloat(baseRoughness),
+    metallic: parseFloat(metallic)
+};
+
+async function modifyGltfFile(file, name) {
+    if (name.endsWith('.gltf')) {
+        // Read the file as text
+        const fileText = await file.text();
+
+        // Parse the text as JSON
+        let gltfObject = JSON.parse(fileText);
+
+        // Modify the properties
+        let material = gltfObject.materials[0];
+        let clearCoatExtension = material.extensions.KHR_materials_clearcoat;
+        let pbrMetallicRoughness = material.pbrMetallicRoughness;
+
+        if (decalsObject.clearCoat !== undefined) {
+            clearCoatExtension.clearcoatFactor = decalsObject.clearCoat;
+        }
+        if (decalsObject.clearCoatRoughness !== undefined) {
+            clearCoatExtension.clearCoatRoughnessFactor = decalsObject.clearCoatRoughness;
+        }
+        if (decalsObject.baseRoughness !== undefined) {
+            pbrMetallicRoughness.roughnessFactor = decalsObject.baseRoughness;
+        }
+        if (decalsObject.metallic !== undefined) {
+            pbrMetallicRoughness.metallicFactor = decalsObject.metallic;
+        }
+
+        // Convert the modified JSON back to a string
+        const modifiedGltfText = JSON.stringify(gltfObject);
+
+        // Convert the string back to a File
+        const modifiedGltfFile = new File([modifiedGltfText], name, {type: 'application/json'});
+
+        // Create a new Response object with the modified GLTF file
+        const response = new Response(modifiedGltfFile);
+
+        return response;
+    }
+
+    // If the file is not a GLTF file, return it as is
+    return file;
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-	const app = new App(document.body, location);
+    const app = new App(document.body, location);
 });
