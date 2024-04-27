@@ -49,6 +49,7 @@ class App {
 	load(fileMap) {
 		let rootFile;
 		let rootPath;
+		console.log(fileMap)
 		Array.from(fileMap).forEach(([path, file]) => {
 			if (file.name.match(/\.(gltf|glb)$/)) {
 				rootFile = file;
@@ -70,6 +71,8 @@ class App {
 
 		const viewer = this.viewer || this.createViewer();
 
+		console.log(rootFile, rootPath, fileMap)
+
 		const fileURL = URL.createObjectURL(rootFile);
 
 		viewer
@@ -81,21 +84,39 @@ class App {
 
 	async fetchAndLoadFilesFromExample() {
 		const urlParams = new URLSearchParams(window.location.search);
-		const filesParam = urlParams.get('files');
-		const filenames = filesParam ? filesParam.split(',') : []; // split the 'files' parameter into an array of filenames
+		const carParam = urlParams.get('car');
+		const liveryId = urlParams.get('liveryId');
 
 		const fileMap = new Map();
 
-		const baseURL = 'http://localhost:8080';
+		// Fetch all files from the public directory related to the car
+		const response = await fetch(`/car_models/modelInfo.json`);
+		let carFiles = await response.json();
+		carFiles = carFiles[carParam];
 
-		const filePromises = filenames.map(async filename => {
-			const response = await fetch(`${baseURL}${filename}`);
+		const filePromises = carFiles.map(async filename => {
+			const response = await fetch(`/car_models/${carParam}/${filename}`);
 			const blob = await response.blob();
 			const file = new File([blob], filename.split('/').pop());
 			fileMap.set(filename.split('/').pop(), file);
 		});
 
 		await Promise.all(filePromises);
+
+		/*// Fetch the specific file from MongoDB GridFS bucket
+		const client = await MongoClient.connect('mongodb+srv://rw:we7NJSXwGwFbnxcC@rennwelten.cqnld9c.mongodb.net/?retryWrites=true&w=majority&appName=rennwelten');
+		const db = client.db('rennwelten_livery');
+		const bucket = new GridFSBucket(db);
+
+		const gridFsFile = await new Promise((resolve, reject) => {
+			bucket.openDownloadStreamByName(liveryId + "_decals")
+				.on('data', chunk => resolve(chunk))
+				.on('error', error => reject(error));
+		});
+
+		const gridFsBlob = new Blob([gridFsFile]);
+		const gridFsFileObj = new File([gridFsBlob], "livery.png");
+		fileMap.set(liveryId, gridFsFileObj);*/
 
 		this.load(fileMap);
 	}
