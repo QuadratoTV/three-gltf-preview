@@ -153,6 +153,7 @@ export class Viewer {
 			this.axesCamera.position.copy(this.defaultCamera.position);
 			this.axesCamera.lookAt(this.axesScene.position);
 			this.axesRenderer.render(this.axesScene, this.axesCamera);
+		}
 	}
 
 	resize() {
