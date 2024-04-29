@@ -1,4 +1,4 @@
-import {Viewer} from './viewer.js';
+import { Viewer } from './viewer.js';
 import queryString from 'query-string';
 
 window.VIEWER = {};
@@ -25,6 +25,8 @@ class App {
         this.dropEl = el.querySelector('.dropzone');
         this.inputEl = el.querySelector('#file-input');
 
+        this.showSpinner();
+
         const options = this.options;
 
         this.fetchAndLoadFilesFromExample();
@@ -50,7 +52,7 @@ class App {
     load(fileMap) {
         let rootFile;
         let rootPath;
-        console.log(fileMap)
+        console.log(fileMap);
         Array.from(fileMap).forEach(([path, file]) => {
             if (file.name.match(/\.(gltf|glb)$/)) {
                 rootFile = file;
@@ -72,14 +74,20 @@ class App {
 
         const viewer = this.viewer || this.createViewer();
 
-        console.log(rootFile, rootPath, fileMap)
+        console.log(rootFile, rootPath, fileMap);
 
         const fileURL = URL.createObjectURL(rootFile);
+
+        const cleanup = () => {
+            this.hideSpinner();
+            if (typeof rootFile === 'object') URL.revokeObjectURL(fileURL);
+        };
 
         viewer
             .load(fileURL, rootPath, fileMap)
             .catch((e) => console.log(e))
             .then((gltf) => {
+                cleanup();
             });
     }
 
@@ -107,10 +115,18 @@ class App {
 
         response = await fetch(`/liveryTexture/${liveryId}`);
         const blob = await response.blob();
-        const file = new File([blob], "livery.png");
-        fileMap.set("livery.png", file);
+        const file = new File([blob], 'livery.png');
+        fileMap.set('livery.png', file);
 
         this.load(fileMap);
+    }
+
+    showSpinner() {
+        this.spinnerEl.style.display = '';
+    }
+
+    hideSpinner() {
+        this.spinnerEl.style.display = 'none';
     }
 }
 
@@ -157,7 +173,7 @@ async function modifyGltfFile(file, name) {
         const modifiedGltfText = JSON.stringify(gltfObject);
 
         // Convert the string back to a File
-        const modifiedGltfFile = new File([modifiedGltfText], name, {type: 'application/json'});
+        const modifiedGltfFile = new File([modifiedGltfText], name, { type: 'application/json' });
 
         // Create a new Response object with the modified GLTF file
         const response = new Response(modifiedGltfFile);

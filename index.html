@@ -1,14 +1,14 @@
 <!doctype html>
 <head>
-	<meta charset="utf-8" />
-	<meta http-equiv="X-UA-Compatible" content="IE=edge" />
-	<title>glTF Viewer</title>
-	<meta
-		name="viewport"
-		content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-	/>
-	<script defer type="module" src="src/app.js"></script>
-	<style>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>glTF Viewer</title>
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <script defer type="module" src="src/app.js"></script>
+    <style>
         html, body {
             margin: 0;
             padding: 0;
@@ -51,11 +51,46 @@
             top: 0;
             z-index: 0;
         }
-	</style>
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            margin: -20px;
+
+            background-color: #333;
+
+            border-radius: 100%;
+            -webkit-animation: sk-scaleout 1.0s infinite ease-in-out;
+            animation: sk-scaleout 1.0s infinite ease-in-out;
+        }
+
+        @-webkit-keyframes sk-scaleout {
+            0% { -webkit-transform: scale(0) }
+            100% {
+                -webkit-transform: scale(1.0);
+                opacity: 0;
+            }
+        }
+
+        @keyframes sk-scaleout {
+            0% {
+                -webkit-transform: scale(0);
+                transform: scale(0);
+            } 100% {
+                -webkit-transform: scale(1.0);
+                transform: scale(1.0);
+                opacity: 0;
+            }
+        }
+    </style>
 </head>
 <body>
 <main class="wrap">
-	<div class="dropzone">
-	</div>
+    <div class="dropzone">
+    </div>
+    <div class="spinner"></div>
 </main>
 </body>
