@@ -25,8 +25,6 @@ class App {
         this.dropEl = el.querySelector('.dropzone');
         this.inputEl = el.querySelector('#file-input');
 
-        this.showSpinner();
-
         const options = this.options;
 
         this.fetchAndLoadFilesFromExample();
@@ -119,10 +117,6 @@ class App {
         fileMap.set('livery.png', file);
 
         this.load(fileMap);
-    }
-
-    showSpinner() {
-        this.spinnerEl.style.display = '';
     }
 
     hideSpinner() {
