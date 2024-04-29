@@ -105,7 +105,7 @@ class App {
 
         await Promise.all(filePromises);
 
-        response = await fetch(`/livery_texture/${liveryId}`);
+        response = await fetch(`/liveryTexture/${liveryId}`);
         const blob = await response.blob();
         const file = new File([blob], "livery.png");
         fileMap.set("livery.png", file);
