@@ -1,4 +1,4 @@
-import { Viewer } from './viewer.js';
+import {Viewer} from './viewer.js';
 import queryString from 'query-string';
 
 window.VIEWER = {};
@@ -97,23 +97,27 @@ class App {
         const fileMap = new Map();
 
         // Fetch all files from the public directory related to the car
-        let response = await fetch(`/preview/car_models/modelInfo.json`);
+        let response = await fetch(`/render/car_models/modelInfo.json`);
         let carFiles = await response.json();
         carFiles = carFiles[carParam];
 
         const filePromises = carFiles.map(async filename => {
-            let response = await fetch(`/preview/car_models/${carParam}/${filename}`);
+            let response = await fetch(`/render/car_models/${carParam}/${filename}`);
             // response = await modifyGltfFile(response, filename.split('/').pop());
             const blob = await response.blob();
-            const file = new File([blob], filename.split('/').pop());
+            let file = new File([blob], filename.split('/').pop());
+
+            file = await modifyGltfFile(file, filename.split('/').pop());
+
             fileMap.set(filename.split('/').pop(), file);
         });
 
         await Promise.all(filePromises);
 
-        response = await fetch(`/liveryTexture/${liveryId}`);
+        response = await fetch(`/api/rennwelten/liveryTexture/${liveryId}`);
         const blob = await response.blob();
-        const file = new File([blob], 'livery.png');
+        let file = new File([blob], 'livery.png');
+
         fileMap.set('livery.png', file);
 
         this.load(fileMap);
@@ -137,46 +141,45 @@ const decalsObject = {
     metallic: parseFloat(metallic)
 };
 
-async function modifyGltfFile(file, name) {
-    if (name.endsWith('.gltf')) {
-        // Read the file as text
-        const fileText = await file.text();
+function modifyGltfFile(file, name) {
+    return new Promise(async (resolve, reject) => {
+        if (name.endsWith('.gltf')) {
+            try {
+                // Read the file as text
+                const fileText = await file.text();
 
-        // Parse the text as JSON
-        let gltfObject = JSON.parse(fileText);
+                // Parse the text as JSON
+                let gltfObject = JSON.parse(fileText);
 
-        // Modify the properties
-        let material = gltfObject.materials[0];
-        let clearCoatExtension = material.extensions.KHR_materials_clearcoat;
-        let pbrMetallicRoughness = material.pbrMetallicRoughness;
+                if (decalsObject.clearCoat !== undefined) {
+                    gltfObject.materials[0].extensions.KHR_materials_clearcoat.clearcoatFactor = decalsObject.clearCoat;
+                }
+                if (decalsObject.clearCoatRoughness !== undefined) {
+                    gltfObject.materials[0].extensions.KHR_materials_clearcoat.clearCoatRoughnessFactor = decalsObject.clearCoatRoughness;
+                }
+                if (decalsObject.baseRoughness !== undefined) {
+                    gltfObject.materials[0].pbrMetallicRoughness.roughnessFactor = decalsObject.baseRoughness;
+                }
+                if (decalsObject.metallic !== undefined) {
+                    gltfObject.materials[0].pbrMetallicRoughness.metallicFactor = decalsObject.metallic;
+                }
 
-        if (decalsObject.clearCoat !== undefined) {
-            clearCoatExtension.clearcoatFactor = decalsObject.clearCoat;
+                // Convert the modified JSON back to a string
+                const modifiedGltfText = JSON.stringify(gltfObject);
+
+                // Convert the string back to a File
+                const modifiedGltfFile = new File([modifiedGltfText], name, {type: 'application/json'});
+
+                // Create a new Response object with the modified GLTF file
+                resolve(new Response(modifiedGltfFile));
+            } catch (error) {
+                reject(error);
+            }
+        } else {
+            // If the file is not a GLTF file, return it as is
+            resolve(file);
         }
-        if (decalsObject.clearCoatRoughness !== undefined) {
-            clearCoatExtension.clearCoatRoughnessFactor = decalsObject.clearCoatRoughness;
-        }
-        if (decalsObject.baseRoughness !== undefined) {
-            pbrMetallicRoughness.roughnessFactor = decalsObject.baseRoughness;
-        }
-        if (decalsObject.metallic !== undefined) {
-            pbrMetallicRoughness.metallicFactor = decalsObject.metallic;
-        }
-
-        // Convert the modified JSON back to a string
-        const modifiedGltfText = JSON.stringify(gltfObject);
-
-        // Convert the string back to a File
-        const modifiedGltfFile = new File([modifiedGltfText], name, { type: 'application/json' });
-
-        // Create a new Response object with the modified GLTF file
-        const response = new Response(modifiedGltfFile);
-
-        return response;
-    }
-
-    // If the file is not a GLTF file, return it as is
-    return file;
+    });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
