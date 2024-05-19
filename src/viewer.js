@@ -16,7 +16,7 @@ import {
 	REVISION,
 	Scene,
 	Vector3,
-	WebGLRenderer
+	WebGL1Renderer
 } from 'three';
 import Stats from 'three/addons/libs/stats.module.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -94,7 +94,7 @@ export class Viewer {
 		this.activeCamera = this.defaultCamera;
 		this.scene.add(this.defaultCamera);
 
-		this.renderer = window.renderer = new WebGLRenderer({ antialias: true });
+		this.renderer = window.renderer = new WebGL1Renderer({ antialias: true });
 		this.renderer.setClearColor(0xcccccc);
 		this.renderer.setPixelRatio(window.devicePixelRatio);
 		this.renderer.setSize(el.clientWidth, el.clientHeight);
