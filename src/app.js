@@ -15,7 +15,8 @@ class App {
             kiosk: true,
             model: hash.model || '',
             preset: hash.preset || '',
-            cameraPosition: hash.cameraPosition ? hash.cameraPosition.split(',').map(Number) : null
+            cameraPosition: hash.cameraPosition ? hash.cameraPosition.split(',').map(Number) : null,
+            mipMap: urlParams.get('mipMap') === 'true',
         };
 
         this.el = el;
@@ -50,7 +51,6 @@ class App {
     load(fileMap) {
         let rootFile;
         let rootPath;
-        console.log(fileMap);
         Array.from(fileMap).forEach(([path, file]) => {
             if (file.name.match(/\.(gltf|glb)$/)) {
                 rootFile = file;
@@ -72,8 +72,6 @@ class App {
 
         const viewer = this.viewer || this.createViewer();
 
-        console.log(rootFile, rootPath, fileMap);
-
         const fileURL = URL.createObjectURL(rootFile);
 
         const cleanup = () => {
@@ -83,7 +81,7 @@ class App {
 
         viewer
             .load(fileURL, rootPath, fileMap)
-            .catch((e) => console.log(e))
+            .catch()
             .then((gltf) => {
                 cleanup();
             });
@@ -114,7 +112,7 @@ class App {
 
         await Promise.all(filePromises);
 
-        response = await fetch(`/api/rennwelten/liveryTexture/${liveryId}`);
+        response = await fetch(`/rennwelten/api/texture/${liveryId}`);
         const blob = await response.blob();
         let file = new File([blob], 'livery.png');
 
@@ -151,27 +149,53 @@ function modifyGltfFile(file, name) {
                 // Parse the text as JSON
                 let gltfObject = JSON.parse(fileText);
 
+                console.log(gltfObject)
+
+                // Get the material id from the materials that contains "paint" in its "name" property
+                let materialId;
+                for (let i = 0; i < gltfObject.materials.length; i++) {
+                    if (gltfObject.materials[i].name.includes('paint')) {
+                        materialId = i;
+                        break;
+                    }
+                }
+
+                gltfObject.materials[materialId].extensions = {
+                    KHR_materials_clearcoat: {
+                        clearcoatFactor: 0.0,
+                        clearCoatRoughnessFactor: 0.0
+                    }
+                };
+
+                gltfObject.materials[materialId].pbrMetallicRoughness = {
+                    baseColorTexture: { index: 0 },
+                    metallicFactor: 0.0,
+                    roughnessFactor: 0.0
+                };
+
                 if (decalsObject.clearCoat !== undefined) {
-                    gltfObject.materials[0].extensions.KHR_materials_clearcoat.clearcoatFactor = decalsObject.clearCoat;
+                    gltfObject.materials[materialId].extensions.KHR_materials_clearcoat.clearcoatFactor = decalsObject.clearCoat;
                 }
                 if (decalsObject.clearCoatRoughness !== undefined) {
-                    gltfObject.materials[0].extensions.KHR_materials_clearcoat.clearCoatRoughnessFactor = decalsObject.clearCoatRoughness;
+                    gltfObject.materials[materialId].extensions.KHR_materials_clearcoat.clearCoatRoughnessFactor = decalsObject.clearCoatRoughness;
                 }
                 if (decalsObject.baseRoughness !== undefined) {
-                    gltfObject.materials[0].pbrMetallicRoughness.roughnessFactor = decalsObject.baseRoughness;
+                    gltfObject.materials[materialId].pbrMetallicRoughness.roughnessFactor = decalsObject.baseRoughness;
                 }
                 if (decalsObject.metallic !== undefined) {
-                    gltfObject.materials[0].pbrMetallicRoughness.metallicFactor = decalsObject.metallic;
+                    gltfObject.materials[materialId].pbrMetallicRoughness.metallicFactor = decalsObject.metallic;
                 }
 
                 // Convert the modified JSON back to a string
                 const modifiedGltfText = JSON.stringify(gltfObject);
 
+                console.log(gltfObject)
+
                 // Convert the string back to a File
                 const modifiedGltfFile = new File([modifiedGltfText], name, {type: 'application/json'});
 
                 // Create a new Response object with the modified GLTF file
-                resolve(new Response(modifiedGltfFile));
+                resolve(modifiedGltfFile);
             } catch (error) {
                 reject(error);
             }

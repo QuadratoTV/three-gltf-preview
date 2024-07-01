@@ -1,5 +1,5 @@
 import {
-	ACESFilmicToneMapping,
+	ACESFilmicToneMapping, AgXToneMapping,
 	AmbientLight,
 	AnimationMixer,
 	AxesHelper,
@@ -67,7 +67,7 @@ export class Viewer {
 			// Lights
 			punctualLights: true,
 			exposure: 0.0,
-			toneMapping: LinearToneMapping,
+			toneMapping: AgXToneMapping,
 			ambientIntensity: 0.3,
 			ambientColor: '#FFFFFF',
 			directIntensity: 0.8 * Math.PI, // TODO(#116)
@@ -140,7 +140,7 @@ export class Viewer {
 	render() {
 		this.renderer.render(this.scene, this.activeCamera);
 
-		if (this.content) {
+		if (this.content && !this.options.mipMap) {
 			traverseMaterials(this.content, (material) => {
 				if (material.map) {
 					material.map.minFilter = LinearFilter;
