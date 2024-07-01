@@ -112,7 +112,7 @@ class App {
 
         await Promise.all(filePromises);
 
-        response = await fetch(`/rennwelten/api/texture/${liveryId}`);
+        response = await fetch(`/api/texture/${liveryId}`);
         const blob = await response.blob();
         let file = new File([blob], 'livery.png');
 
