@@ -112,7 +112,12 @@ class App {
 
         await Promise.all(filePromises);
 
-        response = await fetch(`/api/texture/${liveryId}`);
+        if (liveryId === null) {
+            response = await fetch(`/api/preview/texture/${urlParams.get('textureId')}`);
+        } else {
+            response = await fetch(`/api/texture/${liveryId}`);
+        }
+
         const blob = await response.blob();
         let file = new File([blob], 'livery.png');
 
@@ -168,7 +173,7 @@ function modifyGltfFile(file, name) {
                 };
 
                 gltfObject.materials[materialId].pbrMetallicRoughness = {
-                    baseColorTexture: { index: 0 },
+                    baseColorTexture: {index: 0},
                     metallicFactor: 0.0,
                     roughnessFactor: 0.0
                 };
